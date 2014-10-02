@@ -1498,8 +1498,12 @@ void do_force_cutsVERLET(FILE *fplog, t_commrec *cr,
             nbnxn_cuda_clear_outputs(nbv->cu_nbv, flags);
             wallcycle_stop(wcycle, ewcLAUNCH_GPU_NB);
 #elif defined(GMX_GPU) && defined(GMX_USE_OPENCL)    
-#pragma message "WARNING Not implemented yet"    
-
+			nbnxn_ocl_wait_gpu(nbv->ocl_nbv,
+				nbv->grp[eintLocal].nbat,
+				flags, eatLocal,
+				enerd->grpp.ener[egLJSR], enerd->grpp.ener[egCOULSR],
+				fr->fshift);
+			cycles_wait_gpu += wallcycle_stop(wcycle, ewcWAIT_GPU_NB_L);
 #endif            
         }
         else

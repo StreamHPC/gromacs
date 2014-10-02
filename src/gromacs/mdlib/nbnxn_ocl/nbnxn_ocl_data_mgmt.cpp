@@ -171,7 +171,7 @@ int ocl_copy_D2H_generic(void * h_dest, cl_mem d_src, size_t offset, size_t byte
 
 int ocl_copy_D2H_async(void * h_dest, cl_mem d_src, size_t offset, size_t bytes, cl_command_queue command_queue, cl_event *copy_event)
 {
-    return ocl_copy_D2H_generic(h_dest, d_src, offset, bytes, false, command_queue, copy_event); // Changed into synchronized reading to avoid race condition. FIXME
+    return ocl_copy_D2H_generic(h_dest, d_src, offset, bytes, true, command_queue, copy_event); 
 }
 
 /*!

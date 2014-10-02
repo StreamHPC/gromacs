@@ -757,7 +757,58 @@ void nbnxn_ocl_wait_gpu(nbnxn_opencl_ptr_t cu_nb,
                          int flags, int aloc,
                          real *e_lj, real *e_el, rvec *fshift)
 {
-    // TO DO: Implement this function for OpenCL
+	int              iloc = -1, i;
+	bool             bCalcEner   = flags & GMX_FORCE_VIRIAL;
+	bool             bCalcFshift = flags & GMX_FORCE_VIRIAL;
+	cl_nb_staging    nbst = cu_nb->nbst;
+	
+
+	/* determine interaction locality from atom locality */
+	if (LOCAL_A(aloc))
+	{
+		iloc = eintLocal;
+	}
+	else if (NONLOCAL_A(aloc))
+	{
+		iloc = eintNonlocal;
+	}
+	else
+	{
+		char stmp[STRLEN];
+		sprintf(stmp, "Invalid atom locality passed (%d); valid here is only "
+			"local (%d) or nonlocal (%d)", aloc, eatLocal, eatNonlocal);
+
+		// TO DO: fix for OpenCL
+		//gmx_incons(stmp);
+	}
+	cl_plist_t *plist = cu_nb->plist[iloc];
+
+	/* Actual sync point. Waits for everything to be finished in the command queue. TODO: Find out if a more fine grained solution is needed */
+	clFinish(cu_nb->stream[iloc]);
+
+	/* add up energies and shift forces (only once at local F wait) */
+	if (LOCAL_I(iloc))
+	{
+	    if (bCalcEner)
+	    {
+	        *e_lj += *nbst.e_lj;
+	        *e_el += *nbst.e_el;
+	    }
+	
+	    if (bCalcFshift)
+	    {
+	        for (i = 0; i < SHIFTS; i++)
+	        {
+	            fshift[i][0] += nbst.fshift[i*3];
+				fshift[i][1] += nbst.fshift[i*3+1];
+	            fshift[i][2] += nbst.fshift[i*3+2 ];
+	        }
+	    }
+	}
+	
+	/* turn off pruning (doesn't matter if this is pair-search step or not) */
+	plist->bDoPrune = false;
+
 }
 ////void nbnxn_cuda_wait_gpu(nbnxn_cuda_ptr_t cu_nb,
 ////                         const nbnxn_atomdata_t *nbatom,
